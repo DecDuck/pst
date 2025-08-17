@@ -1,4 +1,9 @@
-use std::{env, fs, ops::Index, path::PathBuf};
+use std::{
+    env, fs,
+    io::{self, ErrorKind},
+    ops::Index,
+    path::PathBuf,
+};
 
 use axum::{
     Router,
@@ -47,13 +52,21 @@ async fn create_paste(
 }
 
 async fn get_paste(Path(hash): Path<String>, path: PathBuf) -> impl IntoResponse {
-    let file = path.join(hash.replace("/", ""));
+    let file = path.join(hash.trim().replace("/", ""));
     let result = fs::read(file);
 
     let mut headers = HeaderMap::new();
     headers.insert("Content-Type", "text/plain".parse().unwrap());
 
     if let Err(err) = result {
+        if err.kind() == ErrorKind::NotFound {
+            return (
+                StatusCode::BAD_REQUEST,
+                headers,
+                "File does not exist.".as_bytes().to_vec(),
+            );
+        }
+
         return (
             StatusCode::INTERNAL_SERVER_ERROR,
             headers,
@@ -71,8 +84,10 @@ async fn main() {
     let config_file = fs::read_to_string(config_name).unwrap_or("".to_string());
 
     let conf = Ini::load_from_str(&config_file).unwrap();
-    let dir =
-        std::path::Path::new(conf.general_section().get("dir").unwrap_or("./files")).to_path_buf();
+    let dir = std::path::Path::new(conf.general_section().get("dir").unwrap_or("./files"))
+        .to_path_buf()
+        .canonicalize()
+        .unwrap();
     if !dir.exists() || !dir.is_dir() {
         panic!("dir {:?} does not exist", dir);
     }
@@ -129,8 +144,8 @@ async fn main() {
                     return;
                 }
 
-                let endpoint = result.unwrap();
-                let _ = socket.write_all(endpoint.trim().as_bytes()).await;
+                let endpoint = format!("{}\n", result.unwrap());
+                let _ = socket.write_all(endpoint.as_bytes()).await;
             });
         }
     });

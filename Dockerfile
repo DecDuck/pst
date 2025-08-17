@@ -4,9 +4,9 @@ WORKDIR /build
 COPY . .
 RUN cargo build --release
 
-FROM frolvlad/debian:trixie-slim AS run
+FROM debian:trixie-slim AS run
 
 WORKDIR /app
 COPY --from=build /build/target/release/pst .
 
-CMD ["/app/pst"]
+CMD ["/app/pst", "/config.ini"]

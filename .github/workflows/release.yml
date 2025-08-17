@@ -22,23 +22,6 @@ jobs:
           ref: ${{ github.ref }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Determine final version
-        id: get_final_ver
-        run: |
-          BASE_VER=v$(jq -r '.version' package.json)
-          TODAY=$(date +'%Y.%m.%d')
-
-          echo "Today will be: $TODAY"
-          echo "today=$TODAY" >> $GITHUB_OUTPUT
-
-          if [[ "${{ github.event_name }}" == "release" ]]; then
-            FINAL_VER="$BASE_VER"
-          else
-            FINAL_VER="${BASE_VER}-nightly.$TODAY"
-          fi
-
-          echo "final_ver=$FINAL_VER" >> $GITHUB_OUTPUT
-
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 

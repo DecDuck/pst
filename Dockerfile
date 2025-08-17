@@ -4,7 +4,7 @@ WORKDIR /build
 COPY . .
 RUN cargo build --release
 
-FROM frolvlad/alpine-glibc:latest AS run
+FROM frolvlad/debian:trixie-slim AS run
 
 WORKDIR /app
 COPY --from=build /build/target/release/pst .

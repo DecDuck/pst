@@ -1,9 +1,4 @@
-use std::{
-    env, fs,
-    io::{self, ErrorKind},
-    ops::Index,
-    path::PathBuf,
-};
+use std::{env, fs, io::ErrorKind, ops::Index, path::PathBuf, time::Duration};
 
 use axum::{
     Router,
@@ -17,6 +12,7 @@ use rand::distr::{Alphanumeric, SampleString};
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::{TcpListener, TcpStream},
+    time::timeout,
 };
 use url::Url;
 
@@ -30,17 +26,12 @@ async fn create_paste(
     let mut data = Vec::new();
     let mut tooken = socket.take(MAX_SIZE);
 
-    loop {
-        let amount = tooken.read_buf(&mut data).await?;
-        if amount == 0 {
+    while let Ok(read) = timeout(Duration::from_millis(1000), tooken.read_buf(&mut data)).await {
+        let read = read?;
+        if read == 0 {
             break;
         }
-
-        let last = data.last().unwrap();
-        if *last == 10u8 {
-            // Apparently needed to use netcat
-            break;
-        }
+        println!("read {}", read);
     }
 
     let id = Alphanumeric.sample_string(&mut rand::rng(), 16);
